@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import axios from 'axios';
+import api from '@/lib/api';
 import { Send, User, Bot, Loader2, Info, ChevronRight, FileText, Search, PlusCircle, Menu, X, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -40,9 +40,7 @@ export default function ChatPage() {
   const fetchChats = async () => {
     if (!token) return;
     try {
-      const res = await axios.get('http://localhost:5001/api/chat', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/chat');
       setChats(res.data);
     } catch (err) {
       console.error(err);
@@ -55,9 +53,7 @@ export default function ChatPage() {
     setCurrentChatId(id);
     setIsSidebarOpen(false); // Close on mobile after selection
     try {
-      const res = await axios.get(`http://localhost:5001/api/chat/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(`/chat/${id}`);
       setMessages(res.data.messages);
     } catch (err) {
       console.error(err);
@@ -96,11 +92,9 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:5001/api/chat/ask', {
+      const res = await api.post('/chat/ask', {
         query: input,
         chatId: currentChatId
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       const aiMessage: Message = {

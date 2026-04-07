@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import axios from 'axios';
+import api from '@/lib/api';
 import { Upload, File, Trash2, Loader2, CheckCircle, Clock, AlertCircle, Plus, LayoutGrid, List } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -33,9 +33,7 @@ export default function Dashboard() {
   const fetchDocs = async () => {
     if (!token) return;
     try {
-      const res = await axios.get('http://localhost:5001/api/docs', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/docs');
       setDocs(res.data);
     } catch (err) {
       console.error(err);
@@ -64,9 +62,8 @@ export default function Dashboard() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      await axios.post('http://localhost:5001/api/docs/upload', formData, {
+      await api.post('/docs/upload', formData, {
         headers: { 
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -80,9 +77,7 @@ export default function Dashboard() {
 
   const handleDelete = async (id: string) => {
     try {
-      await axios.delete(`http://localhost:5001/api/docs/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/docs/${id}`);
       setDocs(docs.filter(d => d._id !== id));
     } catch (err) {
       console.error(err);

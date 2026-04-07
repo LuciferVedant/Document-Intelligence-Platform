@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
-import axios from 'axios';
+import api from '@/lib/api';
 import { FileText, Loader2, Mail, Lock } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -18,10 +19,25 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await axios.post('http://localhost:5001/api/auth/login', { email, password });
+      const res = await api.post('/auth/login', { email, password });
       login(res.data.user, res.data.token);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid email or password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.post('/auth/google', {
+        credential: credentialResponse.credential
+      });
+      login(res.data.user, res.data.token);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Google login failed');
     } finally {
       setLoading(false);
     }
@@ -44,7 +60,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mb-6">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
             <div className="relative">
@@ -84,6 +100,26 @@ export default function LoginPage() {
             {loading ? <Loader2 className="animate-spin" size={20} /> : 'Sign In'}
           </button>
         </form>
+
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+          </div>
+        </div>
+
+        <div className="flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google login failed')}
+            useOneTap
+            theme="outline"
+            shape="pill"
+            width="100%"
+          />
+        </div>
 
         <p className="mt-8 text-center text-sm text-gray-600">
           Don&apos;t have an account?{' '}

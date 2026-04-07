@@ -28,6 +28,7 @@ if (!fs.existsSync('uploads')) {
 // Auth
 router.post('/auth/register', authController.register);
 router.post('/auth/login', authController.login);
+router.post('/auth/google', authController.googleLogin);
 
 // Docs
 router.post('/docs/upload', authMiddleware, upload.single('file'), docController.uploadDocument);
