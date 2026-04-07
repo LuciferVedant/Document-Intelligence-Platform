@@ -8,6 +8,7 @@ import { Upload, File, Trash2, Loader2, CheckCircle, Clock, AlertCircle, Plus, L
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface Document {
   _id: string;
@@ -67,6 +68,7 @@ export default function Dashboard() {
           'Content-Type': 'multipart/form-data'
         }
       });
+      toast.success(`${file.name} uploaded successfully!`);
       fetchDocs();
     } catch (err) {
       console.error(err);
@@ -78,6 +80,7 @@ export default function Dashboard() {
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/docs/${id}`);
+      toast.success('Document deleted');
       setDocs(docs.filter(d => d._id !== id));
     } catch (err) {
       console.error(err);

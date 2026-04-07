@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { FileText, Loader2, Mail, Lock, User } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
+import { toast } from 'sonner';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -21,9 +22,10 @@ export default function SignupPage() {
     setError('');
     try {
       const res = await api.post('/auth/register', { name, email, password });
+      toast.success('Account created successfully!');
       login(res.data.user, res.data.token);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Something went wrong');
+      // Interceptor handles the error toast
     } finally {
       setLoading(false);
     }
@@ -36,9 +38,10 @@ export default function SignupPage() {
       const res = await api.post('/auth/google', {
         credential: credentialResponse.credential
       });
+      toast.success('Welcome to DocIntel!');
       login(res.data.user, res.data.token);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Google login failed');
+      // Interceptor handles the error toast
     } finally {
       setLoading(false);
     }

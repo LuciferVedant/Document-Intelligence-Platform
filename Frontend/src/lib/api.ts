@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api',
@@ -18,7 +19,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor: Handle 401
+// Response interceptor: Handle 401 and other errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -28,6 +29,9 @@ api.interceptors.response.use(
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
+    } else {
+      const message = error.response?.data?.message || 'Something went wrong';
+      toast.error(message);
     }
     return Promise.reject(error);
   }

@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { Send, User, Bot, Loader2, Info, ChevronRight, FileText, Search, PlusCircle, Menu, X, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -120,6 +121,7 @@ export default function ChatPage() {
     setCurrentChatId(null);
     setMessages([]);
     setIsSidebarOpen(false);
+    toast.success('Started new analysis session');
   };
 
   if (!user) {

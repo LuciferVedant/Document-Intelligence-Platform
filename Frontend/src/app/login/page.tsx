@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { FileText, Loader2, Mail, Lock } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,9 +21,10 @@ export default function LoginPage() {
     setError('');
     try {
       const res = await api.post('/auth/login', { email, password });
+      toast.success(`Welcome back, ${res.data.user.name}!`);
       login(res.data.user, res.data.token);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      // Interceptor handles the error toast
     } finally {
       setLoading(false);
     }
@@ -35,9 +37,10 @@ export default function LoginPage() {
       const res = await api.post('/auth/google', {
         credential: credentialResponse.credential
       });
+      toast.success('Logged in with Google!');
       login(res.data.user, res.data.token);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Google login failed');
+      // Interceptor handles the error toast
     } finally {
       setLoading(false);
     }
