@@ -1,6 +1,6 @@
-import Chunk, { IChunk } from '../models/Chunk';
+import Chunk, { IChunk } from '../models/Chunk.js';
 import mongoose from 'mongoose';
-import { generateEmbedding } from './ai.service';
+import { generateEmbedding } from './ai.service.js';
 
 export async function vectorSearch(userId: string, query: string, limit: number = 5): Promise<IChunk[]> {
   const queryVector = await generateEmbedding(query);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import axios from 'axios';
 import { FileText, Loader2, Mail, Lock, User } from 'lucide-react';

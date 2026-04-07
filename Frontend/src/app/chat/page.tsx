@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import axios from 'axios';
-import { Send, User, Bot, Loader2, Info, ChevronRight, FileText, Search, PlusCircle } from 'lucide-react';
+import { Send, User, Bot, Loader2, Info, ChevronRight, FileText, Search, PlusCircle, Menu, X, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -25,15 +27,18 @@ interface Chat {
 
 export default function ChatPage() {
   const { token, user } = useAuth();
+  const router = useRouter();
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchChats = async () => {
+    if (!token) return;
     try {
       const res = await axios.get('http://localhost:5001/api/chat', {
         headers: { Authorization: `Bearer ${token}` }
@@ -48,6 +53,7 @@ export default function ChatPage() {
 
   const loadChat = async (id: string) => {
     setCurrentChatId(id);
+    setIsSidebarOpen(false); // Close on mobile after selection
     try {
       const res = await axios.get(`http://localhost:5001/api/chat/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -59,8 +65,12 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    if (token) fetchChats();
-  }, [token]);
+    if (!user && !token) {
+      router.push('/login');
+      return;
+    }
+    fetchChats();
+  }, [token, user, router]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -115,177 +125,269 @@ export default function ChatPage() {
   const startNewChat = () => {
     setCurrentChatId(null);
     setMessages([]);
+    setIsSidebarOpen(false);
   };
 
+  if (!user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="animate-spin text-blue-600" size={40} />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-80 border-r border-gray-200 bg-white flex flex-col shrink-0">
-        <div className="p-4 border-b border-gray-50 flex flex-col gap-4">
-          <button 
-            onClick={startNewChat}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-100"
-          >
-            <PlusCircle size={18} />
-            New Analysis
-          </button>
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-                type="text" 
-                placeholder="Search history..." 
-                className="w-full bg-gray-50 pl-10 pr-4 py-2 rounded-xl text-sm border border-transparent focus:border-blue-200 outline-none transition-all"
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-slate-50 relative">
+      {/* Sidebar Toggle (Mobile only) */}
+      <button 
+        onClick={() => setIsSidebarOpen(true)}
+        className="md:hidden fixed bottom-24 left-4 z-40 p-3 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-200 active:scale-90 transition-transform"
+      >
+        <Menu size={24} />
+      </button>
+
+      {/* Sidebar / Drawer */}
+      <AnimatePresence>
+        {(isSidebarOpen || (typeof window !== 'undefined' && window.innerWidth >= 768)) && (
+          <>
+            {/* Overlay for mobile */}
+            <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => setIsSidebarOpen(false)}
+               className="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[45]"
             />
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-          {historyLoading ? (
-            <div className="flex justify-center py-10 text-gray-400">
-              <Loader2 className="animate-spin" />
-            </div>
-          ) : chats.map((chat) => (
-            <button
-              key={chat._id}
-              onClick={() => loadChat(chat._id)}
-              className={cn(
-                "w-full text-left p-3 rounded-xl transition-all group relative overflow-hidden",
-                currentChatId === chat._id ? "bg-blue-50/80 border border-blue-100/50" : "hover:bg-gray-50 border border-transparent"
-              )}
+            
+            <motion.aside 
+              initial={{ x: -320 }}
+              animate={{ x: 0 }}
+              exit={{ x: -320 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed md:relative w-80 h-full border-r border-slate-200 bg-white flex flex-col shrink-0 z-[50] shadow-2xl md:shadow-none"
             >
-              <h4 className={cn(
-                "text-sm font-bold truncate pr-6",
-                currentChatId === chat._id ? "text-blue-700" : "text-gray-700"
-              )}>{chat.title}</h4>
-              <p className="text-[10px] text-gray-400 font-medium uppercase tracking-tight mt-1">
-                {new Date(chat.messages[0]?.timestamp || Date.now()).toLocaleDateString()}
-              </p>
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all text-gray-300">
-                <ChevronRight size={16} />
-              </div>
-            </button>
-          ))}
-        </div>
-        
-        <div className="p-4 border-t border-gray-50 bg-gray-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-lg text-white">
-                <Bot size={20} />
-            </div>
-            <div>
-                <p className="text-xs font-bold text-gray-900 leading-none">Flash Intelligence</p>
-                <p className="text-[10px] text-gray-500 font-medium">Powered by Gemini Pro</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+                <div className="p-6 border-b border-slate-50 flex flex-col gap-5">
+                    <div className="md:hidden flex items-center justify-between mb-2">
+                        <span className="font-extrabold text-slate-900">Analysis History</span>
+                        <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-slate-50 rounded-xl">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <button 
+                        onClick={startNewChat}
+                        className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[20px] font-bold transition-all shadow-lg shadow-blue-200 active:scale-[0.98]"
+                    >
+                        <PlusCircle size={20} strokeWidth={2.5} />
+                        New Analysis
+                    </button>
+                    <div className="relative">
+                        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Search discussions..." 
+                            className="w-full bg-slate-100/50 pl-11 pr-4 py-3 rounded-2xl text-sm border-2 border-transparent focus:border-blue-200 focus:bg-white outline-none transition-all-custom font-medium"
+                        />
+                    </div>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                    {historyLoading ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-300">
+                            <Loader2 className="animate-spin" size={32} />
+                            <p className="text-[10px] font-bold uppercase tracking-widest">Hydrating</p>
+                        </div>
+                    ) : chats.length === 0 ? (
+                        <div className="py-10 text-center opacity-40">
+                             <Sparkles className="mx-auto mb-2" size={24} />
+                             <p className="text-xs font-bold uppercase tracking-tighter">No past chats</p>
+                        </div>
+                    ) : chats.map((chat) => (
+                        <motion.button
+                            key={chat._id}
+                            whileHover={{ x: 4 }}
+                            onClick={() => loadChat(chat._id)}
+                            className={cn(
+                                "w-full text-left p-4 rounded-2xl transition-all group relative overflow-hidden",
+                                currentChatId === chat._id ? "bg-blue-600 text-white shadow-xl shadow-blue-100" : "hover:bg-slate-50 border border-transparent text-slate-700"
+                            )}
+                        >
+                            <h4 className={cn(
+                                "text-sm font-bold truncate pr-6",
+                                currentChatId === chat._id ? "text-white" : "text-slate-900 group-hover:text-blue-600 transition-colors"
+                            )}>{chat.title}</h4>
+                            <p className={cn("text-[10px] font-bold uppercase tracking-tight mt-1 opacity-60")}>
+                                {new Date(chat.messages[0]?.timestamp || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}
+                            </p>
+                            <div className={cn("absolute right-3 top-1/2 -translate-y-1/2 transition-all", currentChatId === chat._id ? "opacity-100" : "opacity-0 group-hover:opacity-100 text-blue-400 group-hover:translate-x-1")}>
+                                <ChevronRight size={18} strokeWidth={3} />
+                            </div>
+                        </motion.button>
+                    ))}
+                </div>
+                
+                <div className="p-5 border-t border-slate-50 bg-slate-50/50">
+                    <div className="flex items-center gap-3.5 px-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                        <div className="p-2.5 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl text-white shadow-lg shadow-blue-100">
+                            <Bot size={20} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-black text-slate-900 leading-none tracking-tight">Intelligence v1.5</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">Flash Core</p>
+                        </div>
+                    </div>
+                </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col bg-gray-50/50 relative">
+      <main className="flex-1 flex flex-col relative h-full">
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-6 py-8 space-y-8 flex flex-col custom-scrollbar"
+          className="flex-1 overflow-y-auto px-4 md:px-8 py-8 space-y-10 flex flex-col custom-scrollbar"
         >
           {messages.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
-              <div className="p-6 bg-white shadow-xl shadow-gray-100/50 rounded-[40px] mb-6">
-                <Bot size={48} className="text-blue-600" />
+            <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex-1 flex flex-col items-center justify-center text-center px-4"
+            >
+              <div className="p-8 bg-white shadow-2xl shadow-slate-200/50 rounded-[50px] mb-8 relative">
+                <Bot size={56} className="text-blue-600" strokeWidth={1.5} />
+                <motion.div 
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                    transition={{ repeat: Infinity, duration: 3 }}
+                    className="absolute inset-0 bg-blue-100/50 rounded-[50px] -z-10 blur-2xl" 
+                />
               </div>
-              <h2 className="text-xl font-bold text-gray-900">How can I help you?</h2>
-              <p className="text-sm text-gray-500 mt-2 max-w-sm">
-                Select a conversation or start a new one to deep dive into your knowledge base.
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Start an Intelligent session</h2>
+              <p className="text-sm md:text-base text-slate-500 mt-2 max-w-sm font-medium leading-relaxed">
+                Connect with your document knowledge base for contextual insights and synthesis.
               </p>
-              <div className="grid grid-cols-2 gap-4 mt-12 w-full max-w-md">
-                {['Summarize my documents', 'Find key findings', 'Explain the technical specs', 'Compare results'].map(q => (
-                    <button key={q} onClick={() => setInput(q)} className="p-4 bg-white border border-gray-100 rounded-2xl hover:border-blue-300 hover:shadow-lg hover:shadow-blue-50/50 transition-all text-xs font-bold text-gray-700 text-left">
-                        {q}
-                    </button>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-12 w-full max-w-lg">
+                {[
+                    { q: 'Summarize key points', c: 'blue' },
+                    { q: 'Find specific findings', c: 'indigo' },
+                    { q: 'Technical deep dive', c: 'slate' },
+                    { q: 'Compare multiple docs', c: 'emerald' }
+                ].map(item => (
+                    <motion.button 
+                        key={item.q} 
+                        whileHover={{ y: -4, scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setInput(item.q)} 
+                        className="p-5 bg-white border border-slate-100 rounded-3xl hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-50/50 transition-all text-sm font-extrabold text-slate-800 text-left flex items-center justify-between"
+                    >
+                        <span>{item.q}</span>
+                        <ChevronRight size={16} className="text-blue-500" />
+                    </motion.button>
                 ))}
               </div>
-            </div>
+            </motion.div>
           ) : messages.map((m, i) => (
-            <div 
+            <motion.div 
               key={i} 
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               className={cn(
-                "flex gap-4 max-w-4xl mx-auto w-full group animate-in fade-in slide-in-from-bottom-4 duration-500",
+                "flex gap-4 max-w-4xl mx-auto w-full group",
                 m.role === 'user' ? "flex-row-reverse" : "flex-row"
               )}
             >
               <div className={cn(
-                "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg text-white",
-                m.role === 'user' ? "bg-gray-800" : "bg-blue-600"
+                "w-10 h-10 md:w-11 md:h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-lg text-white",
+                m.role === 'user' ? "bg-slate-800" : "bg-blue-600 shadow-blue-200"
               )}>
-                {m.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+                {m.role === 'user' ? <User size={20} strokeWidth={2.5} /> : <Bot size={22} strokeWidth={2.5} />}
               </div>
               
               <div className={cn(
-                "flex flex-col gap-3",
-                m.role === 'user' ? "items-end" : "items-start"
+                "flex flex-col gap-3 min-w-0 flex-1",
+                m.role === 'user' ? "items-end ml-10" : "items-start mr-10"
               )}>
                 <div className={cn(
-                  "p-5 rounded-[24px] text-sm leading-relaxed",
-                  m.role === 'user' ? "bg-white text-gray-900 border border-gray-100 shadow-xl shadow-gray-100/50 rounded-tr-none" : "bg-blue-600 text-white shadow-xl shadow-blue-100 rounded-tl-none"
+                  "p-5 rounded-[28px] text-sm md:text-[15px] leading-relaxed font-medium shadow-md",
+                  m.role === 'user' ? "bg-white text-slate-900 border border-slate-100 rounded-tr-[4px]" : "bg-blue-600 text-white rounded-tl-[4px]"
                 )}>
                   {m.content}
                 </div>
                 
                 {m.citations && m.citations.length > 0 && (
-                  <div className="flex flex-wrap gap-2 animate-in fade-in zoom-in duration-300">
+                  <div className="flex flex-wrap gap-2">
                     {m.citations.map((c, j) => (
-                      <div 
+                      <motion.div 
                         key={j} 
-                        className="group/cit flex items-center gap-1.5 px-3 py-1 bg-white border border-gray-200 rounded-full text-[10px] font-bold text-gray-600 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-default"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 + (j * 0.1) }}
+                        className="group/cit flex items-center gap-2 px-3.5 py-1.5 bg-white border border-slate-200 rounded-full text-[11px] font-bold text-slate-600 hover:border-blue-400 hover:bg-blue-50 transition-all-custom cursor-default shadow-sm"
                         title={c.snippet}
                       >
                         <FileText size={12} className="text-blue-500" />
-                        Source {j + 1}
-                        <div className="w-0 group-hover/cit:w-16 overflow-hidden transition-all whitespace-nowrap opacity-0 group-hover/cit:opacity-100 font-medium text-gray-400">
-                            View context
+                        Ref {j + 1}
+                        <div className="hidden sm:block w-0 group-hover/cit:w-20 overflow-hidden transition-all whitespace-nowrap opacity-0 group-hover/cit:opacity-100 font-bold text-slate-400 ml-1">
+                            • Context
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           ))}
           
-          {loading && (
-            <div className="flex gap-4 max-w-4xl mx-auto w-full animate-pulse">
-              <div className="w-10 h-10 rounded-2xl bg-blue-100 shrink-0" />
-              <div className="flex flex-col gap-2 w-full max-w-sm">
-                <div className="h-4 bg-gray-200 rounded-full w-3/4" />
-                <div className="h-4 bg-gray-200 rounded-full w-1/2" />
-              </div>
-            </div>
-          )}
+          <AnimatePresence>
+            {loading && (
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex gap-4 max-w-4xl mx-auto w-full"
+                >
+                    <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-100">
+                        <Bot size={22} className="animate-pulse" />
+                    </div>
+                    <div className="flex flex-col gap-2.5 w-full max-w-xs">
+                        <div className="h-4 bg-slate-200 rounded-full w-full animate-pulse" />
+                        <div className="h-4 bg-slate-200 rounded-full w-2/3 animate-pulse" />
+                    </div>
+                </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Input Area */}
-        <div className="p-6 bg-gradient-to-t from-gray-50 to-transparent">
+        <div className="p-4 md:p-8 bg-gradient-to-t from-slate-50 to-transparent">
           <form 
             onSubmit={handleSend}
-            className="max-w-4xl mx-auto relative group"
+            className="max-w-4xl mx-auto relative flex items-center gap-3"
           >
-            <input 
-              type="text" 
-              placeholder="Ask anything about your documents..." 
-              className="w-full bg-white border border-gray-200 rounded-3xl pl-6 pr-14 py-5 shadow-2xl shadow-gray-200/50 focus:border-blue-400 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-gray-400 text-sm font-medium"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={loading}
-            />
-            <button 
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition-all disabled:opacity-40 shadow-lg shadow-blue-200"
-            >
-              <Send size={18} />
-            </button>
+            <div className="relative flex-1 group">
+                <input 
+                    type="text" 
+                    placeholder="Engage with your document knowledge base..." 
+                    className="w-full bg-white border-2 border-slate-100 rounded-[32px] pl-6 pr-14 py-5 shadow-2xl shadow-slate-200/40 focus:border-blue-400 focus:ring-8 focus:ring-blue-100/50 outline-none transition-all-custom placeholder:text-slate-400 text-sm md:text-base font-bold text-slate-800"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    disabled={loading}
+                />
+                <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.9 }}
+                    type="submit"
+                    disabled={!input.trim() || loading}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition-all disabled:opacity-40 disabled:grayscale shadow-xl shadow-blue-200"
+                >
+                    {loading ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} strokeWidth={2.5} />}
+                </motion.button>
+            </div>
           </form>
-          <div className="max-w-4xl mx-auto text-center mt-3 flex items-center justify-center gap-1.5 opacity-40">
-            <Info size={12} />
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-900">Secure & Isolated Data Processing</p>
+          <div className="max-w-4xl mx-auto text-center mt-4 hidden sm:flex items-center justify-center gap-1.5 opacity-30">
+            <Info size={12} strokeWidth={3} />
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900">Encrypted Knowledge Processing</p>
           </div>
         </div>
       </main>

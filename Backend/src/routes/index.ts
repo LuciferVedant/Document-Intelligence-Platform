@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import * as authController from '../controllers/auth.controller';
-import * as docController from '../controllers/doc.controller';
-import * as chatController from '../controllers/chat.controller';
-import { authMiddleware } from '../middleware/auth';
+import * as authController from '../controllers/auth.controller.js';
+import * as docController from '../controllers/doc.controller.js';
+import * as chatController from '../controllers/chat.controller.js';
+import { authMiddleware } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'path';
 

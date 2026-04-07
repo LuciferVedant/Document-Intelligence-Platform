@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import User from '../models/User.js';
 
 export const authMiddleware = async (req: any, res: Response, next: NextFunction) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');

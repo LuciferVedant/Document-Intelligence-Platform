@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import Document from '../models/Document';
-import { processDocument } from '../services/processing.service';
+import Document from '../models/Document.js';
+import { processDocument } from '../services/processing.service.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

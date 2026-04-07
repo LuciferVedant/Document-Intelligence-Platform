@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import axios from 'axios';
-import { Upload, File, Trash2, Loader2, CheckCircle, Clock, AlertCircle, Plus } from 'lucide-react';
+import { Upload, File, Trash2, Loader2, CheckCircle, Clock, AlertCircle, Plus, LayoutGrid, List } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Document {
   _id: string;
@@ -21,12 +23,15 @@ interface Document {
 
 export default function Dashboard() {
   const { token, user } = useAuth();
+  const router = useRouter();
   const [docs, setDocs] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const fetchDocs = async () => {
+    if (!token) return;
     try {
       const res = await axios.get('http://localhost:5001/api/docs', {
         headers: { Authorization: `Bearer ${token}` }
@@ -40,15 +45,19 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (token) fetchDocs();
+    if (!user && !token) {
+      router.push('/login');
+      return;
+    }
+    fetchDocs();
     
     // Poll for status updates
     const interval = setInterval(() => {
-      if (token) fetchDocs();
+      fetchDocs();
     }, 5000);
     
     return () => clearInterval(interval);
-  }, [token]);
+  }, [token, user, router]);
 
   const handleUpload = async (file: File) => {
     setUploading(true);
@@ -96,117 +105,215 @@ export default function Dashboard() {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 10 },
+    show: { opacity: 1, scale: 1, y: 0 }
+  };
+
+  if (!user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="animate-spin text-blue-600" size={40} />
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12">
-      <div className="flex items-center justify-between mb-10">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12"
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Document Library</h1>
-          <p className="text-gray-500 mt-1">Manage and process your documents for AI analysis</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Document Library</h1>
+          <p className="text-slate-500 mt-1 text-sm md:text-base">Manage and process your documents for AI analysis</p>
         </div>
-        <label className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-blue-200 flex items-center gap-2 cursor-pointer">
-          <Plus size={20} />
-          Upload New
-          <input 
-            type="file" 
-            className="hidden" 
-            onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
-            accept=".pdf,.docx,.pptx"
-          />
-        </label>
+        
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          <div className="hidden sm:flex items-center bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
+            <button 
+              onClick={() => setViewMode('grid')}
+              className={cn("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-slate-100 text-blue-600 shadow-inner" : "text-slate-400 hover:text-slate-600")}
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button 
+              onClick={() => setViewMode('list')}
+              className={cn("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-slate-100 text-blue-600 shadow-inner" : "text-slate-400 hover:text-slate-600")}
+            >
+              <List size={18} />
+            </button>
+          </div>
+          
+          <label className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl font-bold transition-all shadow-lg shadow-blue-200 flex items-center gap-2 cursor-pointer active:scale-95 text-sm">
+            <Plus size={18} />
+            <span>Upload New</span>
+            <input 
+                type="file" 
+                className="hidden" 
+                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+                accept=".pdf,.docx,.pptx"
+            />
+          </label>
+        </div>
       </div>
 
-      <div 
+      <motion.div 
+        animate={dragActive ? { scale: 1.01 } : { scale: 1 }}
         className={cn(
-          "relative group mb-12 border-2 border-dashed rounded-3xl p-12 transition-all flex flex-col items-center justify-center text-center",
-          dragActive ? "border-blue-500 bg-blue-50/50" : "border-gray-200 bg-white hover:border-blue-400 hover:bg-gray-50/50"
+          "relative group mb-12 border-2 border-dashed rounded-[32px] p-8 md:p-14 transition-all-custom flex flex-col items-center justify-center text-center overflow-hidden",
+          dragActive ? "border-blue-500 bg-blue-50/50 shadow-2xl shadow-blue-100 ring-8 ring-blue-500/5" : "border-slate-200 bg-white hover:border-blue-400 hover:bg-slate-50/50"
         )}
         onDragEnter={onDrag}
         onDragLeave={onDrag}
         onDragOver={onDrag}
         onDrop={onDrop}
       >
-        <div className="p-4 bg-blue-100 text-blue-600 rounded-2xl mb-4 group-hover:scale-110 transition-transform">
-          <Upload size={32} />
-        </div>
-        <h3 className="text-lg font-bold text-gray-900">Drag & Drop Documents</h3>
-        <p className="text-sm text-gray-500 mt-2 max-w-xs mx-auto">
-          Support for PDF, DOCX, and PPTX up to 50MB. Processed documents will be available for AI chat.
+        <motion.div 
+          animate={dragActive ? { scale: 1.2, rotate: 10 } : { scale: 1, rotate: 0 }}
+          className="p-5 md:p-6 bg-blue-600 text-white rounded-3xl mb-6 shadow-xl shadow-blue-200"
+        >
+          <Upload size={32} strokeWidth={2.5} />
+        </motion.div>
+        <h3 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight">Drop your documents here</h3>
+        <p className="text-sm text-slate-500 mt-2 max-w-xs mx-auto font-medium">
+          Supports PDF, DOCX, and PPTX up to 50MB. Processed docs will be ready for chat instantly.
         </p>
-        
-        {uploading && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center z-10 transition-all">
-            <Loader2 className="animate-spin text-blue-600 mb-2" size={40} />
-            <p className="text-sm font-bold text-gray-700">Uploading Document...</p>
-          </div>
-        )}
-      </div>
+
+        <AnimatePresence>
+            {uploading && (
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-white/90 backdrop-blur-md rounded-[32px] flex flex-col items-center justify-center z-10 p-6"
+            >
+                <div className="relative w-16 h-16 mb-4">
+                    <Loader2 className="animate-spin text-blue-600 absolute inset-0" size={64} strokeWidth={2} />
+                    <Upload className="absolute inset-4 text-blue-400 animate-bounce" size={32} strokeWidth={2.5} />
+                </div>
+                <p className="text-base font-extrabold text-slate-900 tracking-tight">Optimizing & Uploading...</p>
+                <p className="text-xs text-slate-500 mt-1 font-bold uppercase tracking-widest">Handled securely</p>
+            </motion.div>
+            )}
+        </AnimatePresence>
+      </motion.div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="animate-spin text-gray-400" size={40} />
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <Loader2 className="animate-spin text-blue-600" size={48} strokeWidth={2.5} />
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Syncing Library</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className={cn(
+                "grid gap-6",
+                viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"
+            )}
+        >
           {docs.map((doc) => (
-            <div key={doc._id} className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-xl hover:shadow-gray-100 transition-all group">
-              <div className="flex items-start justify-between mb-4">
+            <motion.div 
+                key={doc._id} 
+                variants={itemVariants}
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                className={cn(
+                    "bg-white border border-slate-200 rounded-3xl p-6 transition-all hover:shadow-2xl hover:shadow-slate-200/60 group relative overflow-hidden",
+                    viewMode === 'list' && "flex items-center gap-4 py-4"
+                )}
+            >
+              <div className={cn(
+                "flex items-start justify-between mb-4",
+                viewMode === 'list' && "mb-0 shrink-0"
+              )}>
                 <div className={cn(
-                  "p-2.5 rounded-xl",
-                  doc.fileType.includes('pdf') ? "bg-red-50 text-red-600" : 
+                  "p-3 rounded-2xl shadow-sm",
+                  doc.fileType.includes('pdf') ? "bg-rose-50 text-rose-600" : 
                   doc.fileType.includes('word') ? "bg-blue-50 text-blue-600" : "bg-orange-50 text-orange-600"
                 )}>
-                  <File size={24} />
+                  <File size={28} strokeWidth={2.5} />
                 </div>
                 <button 
                   onClick={() => handleDelete(doc._id)}
-                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all md:opacity-0 group-hover:opacity-100"
+                  className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all md:opacity-0 group-hover:opacity-100 absolute top-4 right-4"
                 >
                   <Trash2 size={18} />
                 </button>
               </div>
-              <h4 className="font-bold text-gray-900 truncate mb-1" title={doc.fileName}>{doc.fileName}</h4>
-              <p className="text-xs text-gray-400 mb-4">
-                {format(new Date(doc.createdAt), 'MMM dd, yyyy • p')}
-              </p>
+
+              <div className="flex-1 min-w-0">
+                <h4 className="font-extrabold text-slate-900 truncate mb-1 text-sm md:text-base pr-8" title={doc.fileName}>{doc.fileName}</h4>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tight mb-4">
+                    {format(new Date(doc.createdAt), 'MMM dd • p')}
+                </p>
+              </div>
               
-              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                <div className="flex items-center gap-1.5">
+              <div className={cn(
+                "flex items-center justify-between pt-4 border-t border-slate-50",
+                viewMode === 'list' && "hidden sm:flex border-t-0 p-0 ml-auto gap-10"
+              )}>
+                <div className="flex items-center gap-2">
                   {doc.status === 'completed' ? (
-                    <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-bold uppercase tracking-wider">
-                      <CheckCircle size={14} />
+                    <div className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-extrabold uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-lg">
+                      <CheckCircle size={12} strokeWidth={3} />
                       Ready
                     </div>
                   ) : doc.status === 'processing' ? (
-                    <div className="flex items-center gap-1.5 text-blue-600 text-xs font-bold uppercase tracking-wider">
-                      <Loader2 size={14} className="animate-spin" />
-                      Processing
+                    <div className="flex items-center gap-1.5 text-blue-600 text-[10px] font-extrabold uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-lg">
+                      <Loader2 size={12} className="animate-spin" />
+                      Index
                     </div>
                   ) : doc.status === 'error' ? (
-                    <div className="flex items-center gap-1.5 text-red-600 text-xs font-bold uppercase tracking-wider">
-                      <AlertCircle size={14} />
-                      Failed
+                    <div className="flex items-center gap-1.5 text-red-600 text-[10px] font-extrabold uppercase tracking-widest bg-red-50 px-2 py-1 rounded-lg">
+                      <AlertCircle size={12} />
+                      Fail
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 text-gray-400 text-xs font-bold uppercase tracking-wider">
-                      <Clock size={14} />
-                      Pending
+                    <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-lg">
+                      <Clock size={12} />
+                      Wait
                     </div>
                   )}
                 </div>
-                <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium uppercase">
+                <span className="text-[9px] font-extrabold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg uppercase tracking-wider">
                   {(doc.metadata.size / 1024 / 1024).toFixed(2)} MB
                 </span>
               </div>
-            </div>
+            </motion.div>
           ))}
           
-          {docs.length === 0 && (
-            <div className="col-span-full py-20 text-center">
-              <p className="text-gray-400 italic">No documents uploaded yet.</p>
-            </div>
-          )}
-        </div>
+          <AnimatePresence>
+            {docs.length === 0 && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="col-span-full py-20 text-center flex flex-col items-center gap-4"
+                >
+                    <div className="p-8 bg-slate-100 rounded-[40px] text-slate-300">
+                        <File size={64} strokeWidth={1} />
+                    </div>
+                    <div>
+                        <p className="text-slate-900 font-extrabold text-lg">Your library is empty</p>
+                        <p className="text-slate-400 text-sm mt-1">Start by uploading your first document</p>
+                    </div>
+                </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

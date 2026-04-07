@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import Chat from '../models/Chat';
-import { vectorSearch } from '../services/retrieval.service';
-import { generateChatResponse } from '../services/ai.service';
+import Chat from '../models/Chat.js';
+import { vectorSearch } from '../services/retrieval.service.js';
+import { generateChatResponse } from '../services/ai.service.js';
 import mongoose from 'mongoose';
 
 export const askQuestion = async (req: any, res: Response) => {
@@ -25,10 +25,11 @@ export const askQuestion = async (req: any, res: Response) => {
     const answer = await generateChatResponse(query, contextText, history);
 
     // 4. Update Chat History
-    const userMessage = { role: 'user' as const, content: query };
+    const userMessage = { role: 'user' as const, content: query, timestamp: new Date() };
     const assistantMessage = { 
         role: 'assistant' as const, 
         content: answer,
+        timestamp: new Date(),
         citations: contextChunks.map(c => ({
             docId: c.docId,
             docName: "Document", // We'd ideally join this, but for now we'll just store basic info

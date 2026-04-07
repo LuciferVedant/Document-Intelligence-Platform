@@ -1,10 +1,13 @@
-import pdf from 'pdf-parse';
-import mammoth from 'mammoth';
-import officeParser from 'officeparser';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdf = require('pdf-parse');
+const mammoth = require('mammoth');
+const officeParser = require('officeparser');
+
 import * as fs from 'fs';
-import { generateEmbedding } from './ai.service';
-import Chunk from '../models/Chunk';
-import Document from '../models/Document';
+import { generateEmbedding } from './ai.service.js';
+import Chunk from '../models/Chunk.js';
+import Document from '../models/Document.js';
 import mongoose from 'mongoose';
 
 export async function extractText(filePath: string, fileType: string): Promise<string> {
