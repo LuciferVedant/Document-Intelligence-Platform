@@ -16,7 +16,7 @@ export async function generateChatResponse(
   context: string, 
   history: { role: 'user' | 'assistant', content: string }[] = []
 ): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   
   const prompt = `
     You are a Document Intelligence Assistant. 
