@@ -31,7 +31,9 @@ api.interceptors.response.use(
       }
     } else {
       const message = error.response?.data?.message || 'Something went wrong';
-      toast.error(message);
+      if (typeof window !== 'undefined') {
+        toast.error(message);
+      }
     }
     return Promise.reject(error);
   }

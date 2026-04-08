@@ -54,13 +54,17 @@ export async function processDocument(userId: string, docId: string, filePath: s
     await Document.findByIdAndUpdate(docId, { status: 'processing' });
 
     // 1. Extract
+    console.log(`[Processing] Extracting text from ${fileType}...`);
     const text = await extractText(filePath, fileType);
+    console.log(`[Processing] Extracted ${text.length} characters.`);
     
     // 2. Chunk
     const chunks = chunkText(text);
+    console.log(`[Processing] Split into ${chunks.length} chunks.`);
     
     // 3. Embed & Store
     for (let i = 0; i < chunks.length; i++) {
+        console.log(`[Processing] Generating embedding for chunk ${i+1}/${chunks.length}...`);
         const content = chunks[i];
         const embedding = await generateEmbedding(content);
         
@@ -75,14 +79,18 @@ export async function processDocument(userId: string, docId: string, filePath: s
         });
     }
 
+    console.log(`[Processing] Successfully completed ${docId}`);
+
     // 4. Update status to completed
     await Document.findByIdAndUpdate(docId, { status: 'completed' });
     
     // Cleanup temporary file
-    fs.unlinkSync(filePath);
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
     
   } catch (error: any) {
-    console.error('Processing error:', error);
+    console.error(`[Processing Error] Document ${docId}:`, error);
     await Document.findByIdAndUpdate(docId, { 
         status: 'error', 
         'metadata.error': error.message 
