@@ -3,11 +3,11 @@
 A comprehensive platform for uploading, processing, and interacting with documents using AI (RAG).
 
 ## Features
-- **Multi-user Isolation**: Secure JWT authentication with strict data partitioning.
+- **Multi-user Isolation**: Secure JWT authentication with **Google OAuth** and email/password sign-in, featuring strict data partitioning.
 - **Document Processing**: Pipeline for PDF, DOCX, and PPTX extraction and chunking.
 - **Intelligent RAG**: Multi-step retrieval using MongoDB Atlas Vector Search.
-- **Grounded AI Chat**: Conversational interface with source citations and snippet highlighting.
-- **Premium UI**: Modern, responsive design built with Next.js and Tailwind CSS.
+- **Grounded AI Chat**: Conversational interface with contextual source citations and snippet references.
+- **Premium UI**: Modern, responsive design built with Next.js 15 and Framer Motion.
 
 ## High-Level Architecture
 
@@ -47,7 +47,7 @@ graph TD
 1. `cd Backend`
 2. `npm install`
 3. Create `.env` from `.env.example` and add your keys.
-4. `npm start` (or `npm run dev`)
+4. `npm run dev`
 
 ### Frontend
 1. `cd Frontend`
@@ -55,7 +55,7 @@ graph TD
 3. `npm run dev`
 
 ## Tech Stack
-- **Frontend**: Next.js 15, Tailwind CSS, Lucide Icons, Axios.
+- **Frontend**: Next.js 15, Tailwind CSS, Framer Motion, Lucide Icons, Axios.
 - **Backend**: Node.js, Express, TypeScript, Mongoose.
-- **Database**: MongoDB (Atlas Search enabled).
-- **AI**: Google Gemini (1.5 Flash + Embedding-001).
+- **Database**: MongoDB (Atlas Vector Search enabled).
+- **AI**: Google Gemini (2.5 Flash + Embedding-001).
