@@ -30,6 +30,11 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchDocs = async () => {
     if (!token) return;
@@ -118,9 +123,9 @@ export default function Dashboard() {
     show: { opacity: 1, scale: 1, y: 0 }
   };
 
-  if (!user) {
+  if (!mounted || !user) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <Loader2 className="animate-spin text-blue-600" size={40} />
       </div>
     );

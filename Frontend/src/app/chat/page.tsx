@@ -37,6 +37,11 @@ export default function ChatPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchChats = async () => {
     if (!token) return;
@@ -124,9 +129,9 @@ export default function ChatPage() {
     toast.success('Started new analysis session');
   };
 
-  if (!user) {
+  if (!mounted || !user) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <Loader2 className="animate-spin text-blue-600" size={40} />
       </div>
     );

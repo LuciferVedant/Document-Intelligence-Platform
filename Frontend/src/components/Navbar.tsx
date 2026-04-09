@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { FileText, LogOut, User, Menu, X } from 'lucide-react';
@@ -10,8 +10,14 @@ import { cn } from '@/lib/utils';
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (!user) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Prevent hydration mismatch by only rendering after mount
+  if (!mounted || !user) return null;
 
   const navLinks = [
     { href: "/dashboard", label: "Documents", icon: FileText },
