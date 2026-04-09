@@ -4,9 +4,10 @@ A comprehensive platform for uploading, processing, and interacting with documen
 
 ## Features
 - **Multi-user Isolation**: Secure JWT authentication with **Google OAuth** and email/password sign-in, featuring strict data partitioning.
-- **Document Processing**: Pipeline for PDF, DOCX, and PPTX extraction and chunking.
-- **Intelligent RAG**: Multi-step retrieval using MongoDB Atlas Vector Search.
-- **Grounded AI Chat**: Conversational interface with contextual source citations and snippet references.
+- **Batch Document Processing**: High-performance pipeline for **PDF, DOCX, and PPTX** extraction with **multi-file batch upload** support.
+- **Context Workspace**: Explicitly select specific documents for targeted chat analysis with **sticky per-chat memory**.
+- **Intelligent RAG**: Hybrid retrieval logic featuring **Explicit Filter Selection** and fallback MongoDB Atlas Vector Search.
+- **Grounded AI Chat**: Conversational interface with **document-grouped source citations** and a **50-chunk context safety threshold**.
 - **Premium UI**: Modern, responsive design built with Next.js 15 and Framer Motion.
 
 ## High-Level Architecture
@@ -31,13 +32,15 @@ graph TD
     API -->|Store Chunks| DB
     end
 
-    subgraph "Retrieval Flow"
-    API -->|Query Vector| AI
-    AI -->|Embedding| API
-    API -->|Vector Search| DB
-    DB -->|Relevant Chunks| API
-    API -->|Prompt + Context| AI
-    AI -->|Grounded Response| API
+    subgraph "Retrieval Flow (RAG)"
+    API -->|1. Query Vector| AI
+    AI -->|2. Embedding| API
+    UI -->|3. Manual Filter| API
+    API -->|4. Get Selected Docs| DB
+    API -->|5. Vector Search (Fallback)| DB
+    DB -->|6. Chunks| API
+    API -->|7. Prompt + Context| AI
+    AI -->|8. Grounded Response| API
     end
 ```
 
