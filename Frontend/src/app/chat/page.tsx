@@ -25,6 +25,14 @@ interface Chat {
   _id: string;
   title: string;
   messages: Message[];
+  selectedDocIds?: string[];
+}
+
+interface Document {
+    _id: string;
+    fileName: string;
+    chunkCount: number;
+    status: string;
 }
 
 export default function ChatPage() {
@@ -42,6 +50,22 @@ export default function ChatPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // New States for Document Selection
+  const [availableDocs, setAvailableDocs] = useState<Document[]>([]);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+
+  const CHUNK_THRESHOLD = 50;
+  const currentTotalChunks = availableDocs
+    .filter(d => selectedDocIds.includes(d._id))
+    .reduce((sum, d) => sum + (d.chunkCount || 0), 0);
+
+  const getSourceDocs = (citations?: Message['citations']) => {
+    if (!citations) return [];
+    const uniqueNames = Array.from(new Set(citations.map(c => c.docName)));
+    return uniqueNames;
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -59,12 +83,33 @@ export default function ChatPage() {
     }
   };
 
+  const fetchDocs = async () => {
+    if (!token) return;
+    setDocsLoading(true);
+    try {
+        const res = await api.get('/docs');
+        setAvailableDocs(res.data.filter((d: any) => d.status === 'completed'));
+    } catch (err) {
+        console.error(err);
+    } finally {
+        setDocsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+        fetchChats();
+        fetchDocs();
+    }
+  }, [token]);
+
   const loadChat = async (id: string) => {
     setCurrentChatId(id);
     setIsSidebarOpen(false); // Close on mobile after selection
     try {
       const res = await api.get(`/chat/${id}`);
       setMessages(res.data.messages);
+      setSelectedDocIds(res.data.selectedDocIds || []);
     } catch (err) {
       console.error(err);
     }
@@ -75,7 +120,6 @@ export default function ChatPage() {
       router.push('/login');
       return;
     }
-    fetchChats();
   }, [token, user, router]);
 
   useEffect(() => {
@@ -104,7 +148,8 @@ export default function ChatPage() {
     try {
       const res = await api.post('/chat/ask', {
         query: input,
-        chatId: currentChatId
+        chatId: currentChatId,
+        selectedDocIds
       });
 
       const aiMessage: Message = {
@@ -129,6 +174,7 @@ export default function ChatPage() {
   const startNewChat = () => {
     setCurrentChatId(null);
     setMessages([]);
+    setSelectedDocIds([]);
     setIsSidebarOpen(false);
     toast.success('Started new analysis session');
   };
@@ -223,51 +269,117 @@ export default function ChatPage() {
                     </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-                    {historyLoading ? (
-                        <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-300">
-                            <Loader2 className="animate-spin" size={32} />
-                            <p className="text-[10px] font-bold uppercase tracking-widest">Hydrating</p>
-                        </div>
-                    ) : chats.length === 0 ? (
-                        <div className="py-10 text-center opacity-40">
-                             <Sparkles className="mx-auto mb-2" size={24} />
-                             <p className="text-xs font-bold uppercase tracking-tighter">No past chats</p>
-                        </div>
-                    ) : chats.map((chat) => (
-                        <motion.button
-                            key={chat._id}
-                            whileHover={{ x: 4 }}
-                            onClick={() => loadChat(chat._id)}
-                            className={cn(
-                                "w-full text-left p-4 rounded-2xl transition-all group relative overflow-hidden",
-                                currentChatId === chat._id ? "bg-blue-600 text-white shadow-xl shadow-blue-100" : "hover:bg-slate-50 border border-transparent text-slate-700"
-                            )}
-                        >
-                            <h4 className={cn(
-                                "text-sm font-bold truncate pr-10",
-                                currentChatId === chat._id ? "text-white" : "text-slate-900 group-hover:text-blue-600 transition-colors"
-                            )}>{chat.title}</h4>
-                            <p className={cn("text-[10px] font-bold uppercase tracking-tight mt-1 opacity-60")}>
-                                {new Date(chat.messages[0]?.timestamp || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}
-                            </p>
-                            
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                <button 
-                                    onClick={(e) => deleteChat(e, chat._id)}
-                                    className={cn(
-                                        "p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500",
-                                        currentChatId === chat._id ? "text-white/60 hover:bg-white/20 hover:text-white" : "text-slate-400"
-                                    )}
-                                >
-                                    <Trash2 size={16} strokeWidth={2.5} />
-                                </button>
-                                <div className={cn("transition-all", currentChatId === chat._id ? "opacity-100" : "opacity-0 group-hover:opacity-0 group-hover:translate-x-1")}>
-                                    <ChevronRight size={18} strokeWidth={3} />
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                    {/* Chat History List */}
+                    <div className="space-y-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Recent chats</span>
+                        {historyLoading ? (
+                            <div className="flex flex-col items-center justify-center py-10 gap-3 text-slate-300">
+                                <Loader2 className="animate-spin" size={24} />
+                            </div>
+                        ) : chats.length === 0 ? (
+                            <div className="py-6 text-center opacity-40">
+                                <p className="text-[10px] font-bold uppercase tracking-tighter">No past chats</p>
+                            </div>
+                        ) : chats.map((chat) => (
+                            <motion.button
+                                key={chat._id}
+                                whileHover={{ x: 4 }}
+                                onClick={() => loadChat(chat._id)}
+                                className={cn(
+                                    "w-full text-left p-3 rounded-2xl transition-all group relative overflow-hidden",
+                                    currentChatId === chat._id ? "bg-blue-600 text-white shadow-xl shadow-blue-100" : "hover:bg-slate-50 border border-transparent text-slate-700"
+                                )}
+                            >
+                                <h4 className={cn(
+                                    "text-sm font-bold truncate pr-10",
+                                    currentChatId === chat._id ? "text-white" : "text-slate-900 group-hover:text-blue-600 transition-colors"
+                                )}>{chat.title}</h4>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                    <button 
+                                        onClick={(e) => deleteChat(e, chat._id)}
+                                        className={cn(
+                                            "p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500",
+                                            currentChatId === chat._id ? "text-white/60 hover:bg-white/20 hover:text-white" : "text-slate-400"
+                                        )}
+                                    >
+                                        <Trash2 size={14} strokeWidth={2.5} />
+                                    </button>
+                                </div>
+                            </motion.button>
+                        ))}
+                    </div>
+
+                    {/* Document Selection Workspace */}
+                    <div className="pt-4 border-t border-slate-50">
+                        <div className="flex flex-col gap-1 px-2 mb-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Context Workspace</span>
+                                <div className="text-[9px] font-black text-blue-600 bg-blue-50 py-0.5 rounded-md">
+                                    {selectedDocIds.length} / {availableDocs.length} Docs
                                 </div>
                             </div>
-                        </motion.button>
-                    ))}
+                            <div className="flex items-center justify-between mt-1">
+                                <span className="text-[10px] font-bold text-slate-400">Chunk Usage</span>
+                                <span className={cn(
+                                    "text-[9px] font-black",
+                                    currentTotalChunks >= CHUNK_THRESHOLD ? "text-red-500" : "text-slate-500"
+                                )}>
+                                    {currentTotalChunks} / {CHUNK_THRESHOLD} Chunks
+                                </span>
+                            </div>
+                            {/* Progress bar for chunks */}
+                            <div className="w-full h-1 bg-slate-100 rounded-full mt-1 overflow-hidden">
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min((currentTotalChunks / CHUNK_THRESHOLD) * 100, 100)}%` }}
+                                    className={cn(
+                                        "h-full transition-all",
+                                        currentTotalChunks >= CHUNK_THRESHOLD ? "bg-red-500" : "bg-blue-500"
+                                    )}
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-1 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                            {docsLoading ? (
+                                <div className="flex justify-center py-4"><Loader2 className="animate-spin text-slate-300" size={16} /></div>
+                            ) : availableDocs.length === 0 ? (
+                                <p className="text-[10px] text-slate-400 italic px-2">No processed docs found</p>
+                            ) : availableDocs.map(doc => (
+                                <div 
+                                    key={doc._id} 
+                                    onClick={() => {
+                                        if (selectedDocIds.includes(doc._id)) {
+                                            setSelectedDocIds(prev => prev.filter(id => id !== doc._id));
+                                        } else {
+                                            const docChunks = doc.chunkCount || 0;
+                                            if (currentTotalChunks + docChunks > CHUNK_THRESHOLD) {
+                                                toast.error(`Selection limit exceeded. Adding "${doc.fileName}" (${docChunks} chunks) would take you to ${currentTotalChunks + docChunks}/${CHUNK_THRESHOLD} chunks. Please remove another document first.`);
+                                                return;
+                                            }
+                                            setSelectedDocIds(prev => [...prev, doc._id]);
+                                        }
+                                    }}
+                                    className={cn(
+                                        "flex items-center gap-2 p-2 rounded-xl border transition-all cursor-pointer",
+                                        selectedDocIds.includes(doc._id) 
+                                            ? "bg-blue-50 border-blue-200 text-blue-700 shadow-sm" 
+                                            : "bg-white border-transparent text-slate-500 hover:bg-slate-50"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0",
+                                        selectedDocIds.includes(doc._id) ? "bg-blue-600 border-blue-600" : "border-slate-300 bg-white"
+                                    )}>
+                                        {selectedDocIds.includes(doc._id) && <PlusCircle size={10} className="text-white rotate-45" />}
+                                    </div>
+                                    <span className="text-[11px] font-bold truncate flex-1">{doc.fileName}</span>
+                                    <span className="text-[9px] font-black opacity-40">{doc.chunkCount || 0}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
                 
                 <div className="p-5 border-t border-slate-50 bg-slate-50/50">
@@ -365,23 +477,25 @@ export default function ChatPage() {
                 </div>
                 
                 {m.citations && m.citations.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {m.citations.map((c, j) => (
-                      <motion.div 
-                        key={j} 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4 + (j * 0.1) }}
-                        className="group/cit flex items-center gap-2 px-3.5 py-1.5 bg-white border border-slate-200 rounded-full text-[11px] font-bold text-slate-600 hover:border-blue-400 hover:bg-blue-50 transition-all-custom cursor-default shadow-sm"
-                        title={c.snippet}
-                      >
-                        <FileText size={12} className="text-blue-500" />
-                        Ref {j + 1}
-                        <div className="hidden sm:block w-0 group-hover/cit:w-20 overflow-hidden transition-all whitespace-nowrap opacity-0 group-hover/cit:opacity-100 font-bold text-slate-400 ml-1">
-                            • Context
-                        </div>
-                      </motion.div>
-                    ))}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                        <Search size={10} />
+                        Connected Sources
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {getSourceDocs(m.citations).map((docName, j) => (
+                        <motion.div 
+                            key={j} 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 * j }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 shadow-sm hover:border-blue-400 transition-all cursor-default"
+                        >
+                            <FileText size={12} className="text-blue-500" />
+                            {docName}
+                        </motion.div>
+                        ))}
+                    </div>
                   </div>
                 )}
               </div>

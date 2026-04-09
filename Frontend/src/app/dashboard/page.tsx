@@ -63,20 +63,26 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [token, user, router]);
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (files: FileList | File[]) => {
     setUploading(true);
     const formData = new FormData();
-    formData.append('file', file);
+    const fileArray = Array.from(files);
+    
+    fileArray.forEach(file => {
+        formData.append('files', file); // Use plural 'files' to match updated backend
+    });
+
     try {
       await api.post('/docs/upload', formData, {
         headers: { 
           'Content-Type': 'multipart/form-data'
         }
       });
-      toast.success(`${file.name} uploaded successfully!`);
+      toast.success(`${fileArray.length} file(s) uploaded successfully!`);
       fetchDocs();
     } catch (err) {
       console.error(err);
+      toast.error('Upload failed');
     } finally {
       setUploading(false);
     }
@@ -103,8 +109,8 @@ export default function Dashboard() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleUpload(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleUpload(e.dataTransfer.files);
     }
   };
 
@@ -165,7 +171,8 @@ export default function Dashboard() {
             <input 
                 type="file" 
                 className="hidden" 
-                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+                multiple
+                onChange={(e) => e.target.files && handleUpload(e.target.files)}
                 accept=".pdf,.docx,.pptx"
             />
           </label>

@@ -16,6 +16,7 @@ export interface IChat extends Document {
   userId: mongoose.Types.ObjectId;
   title: string;
   messages: IMessage[];
+  selectedDocIds: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +37,7 @@ const ChatSchema: Schema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   title: { type: String, default: 'New Conversation' },
   messages: [MessageSchema],
+  selectedDocIds: [{ type: Schema.Types.ObjectId, ref: 'Document' }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });

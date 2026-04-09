@@ -1,8 +1,6 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdf = require('pdf-parse');
-const mammoth = require('mammoth');
-const officeParser = require('officeparser');
+import { PDFParse } from 'pdf-parse';
+import mammoth from 'mammoth';
+import officeParser from 'officeparser';
 
 import * as fs from 'fs';
 import { generateEmbedding } from './ai.service.js';
@@ -14,8 +12,10 @@ export async function extractText(filePath: string, fileType: string): Promise<s
   const dataBuffer = fs.readFileSync(filePath);
   
   if (fileType === 'application/pdf') {
-    const data = await pdf(dataBuffer);
-    return data.text;
+    const parser = new PDFParse({ data: dataBuffer });
+    const result = await parser.getText();
+    await parser.destroy();
+    return result.text;
   } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     const result = await mammoth.extractRawText({ buffer: dataBuffer });
     return result.value;
@@ -81,8 +81,11 @@ export async function processDocument(userId: string, docId: string, filePath: s
 
     console.log(`[Processing] Successfully completed ${docId}`);
 
-    // 4. Update status to completed
-    await Document.findByIdAndUpdate(docId, { status: 'completed' });
+    // 4. Update status to completed and store chunk count
+    await Document.findByIdAndUpdate(docId, { 
+        status: 'completed',
+        chunkCount: chunks.length
+    });
     
     // Cleanup temporary file
     if (fs.existsSync(filePath)) {

@@ -5,25 +5,30 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export const uploadDocument = async (req: any, res: Response) => {
-  if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+  const files = req.files as Express.Multer.File[];
+  if (!files || files.length === 0) return res.status(400).json({ message: 'No files uploaded' });
 
-  const { originalname, mimetype, size, path: filePath } = req.file;
   const userId = req.user.id;
+  const createdDocs = [];
 
   try {
-    const doc = await Document.create({
-      userId,
-      fileName: originalname,
-      fileType: mimetype,
-      fileUrl: filePath,
-      status: 'pending',
-      metadata: { size }
-    });
+    for (const file of files) {
+        const { originalname, mimetype, size, path: filePath } = file;
+        const doc = await Document.create({
+            userId,
+            fileName: originalname,
+            fileType: mimetype,
+            fileUrl: filePath,
+            status: 'pending',
+            metadata: { size }
+        });
 
-    // Run processing in background
-    processDocument(userId, doc._id.toString(), filePath, mimetype);
+        // Run processing in background
+        processDocument(userId, doc._id.toString(), filePath, mimetype);
+        createdDocs.push(doc);
+    }
 
-    res.status(201).json(doc);
+    res.status(201).json(createdDocs);
   } catch (err: any) {
     res.status(400).json({ message: err.message });
   }

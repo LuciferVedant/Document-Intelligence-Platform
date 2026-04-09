@@ -34,3 +34,14 @@ export async function vectorSearch(userId: string, query: string, limit: number 
     return Chunk.find({ userId: userIdObj }).limit(limit);
   }
 }
+
+export async function getChunksByDocs(userId: string, docIds: string[]): Promise<IChunk[]> {
+  const userIdObj = new mongoose.Types.ObjectId(userId);
+  const docIdObjs = docIds.map(id => new mongoose.Types.ObjectId(id));
+
+  // Fetch all chunks for the selected docs, sorted by doc and chunk index
+  return Chunk.find({ 
+    userId: userIdObj, 
+    docId: { $in: docIdObjs } 
+  }).sort({ docId: 1, 'metadata.chunkIndex': 1 });
+}

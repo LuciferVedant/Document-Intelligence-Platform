@@ -31,7 +31,7 @@ router.post('/auth/login', authController.login);
 router.post('/auth/google', authController.googleLogin);
 
 // Docs
-router.post('/docs/upload', authMiddleware, upload.single('file'), docController.uploadDocument);
+router.post('/docs/upload', authMiddleware, upload.array('files', 10), docController.uploadDocument);
 router.get('/docs', authMiddleware, docController.getDocuments);
 router.delete('/docs/:id', authMiddleware, docController.deleteDocument);
 

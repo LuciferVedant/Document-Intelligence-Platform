@@ -11,6 +11,7 @@ export interface IDocument extends Document {
     pageCount?: number;
     error?: string;
   };
+  chunkCount: number;
   createdAt: Date;
 }
 
@@ -25,6 +26,7 @@ const DocumentSchema: Schema = new Schema({
     pageCount: { type: Number },
     error: { type: String }
   },
+  chunkCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 
