@@ -8,6 +8,7 @@ import { Send, User, Bot, Loader2, Info, ChevronRight, FileText, Search, PlusCir
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import Markdown from '@/components/chat/Markdown';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -356,7 +357,11 @@ export default function ChatPage() {
                   "p-5 rounded-[28px] text-sm md:text-[15px] leading-relaxed font-medium shadow-md",
                   m.role === 'user' ? "bg-white text-slate-900 border border-slate-100 rounded-tr-[4px]" : "bg-blue-600 text-white rounded-tl-[4px]"
                 )}>
-                  {m.content}
+                  {m.role === 'assistant' ? (
+                    <Markdown content={m.content} />
+                  ) : (
+                    m.content
+                  )}
                 </div>
                 
                 {m.citations && m.citations.length > 0 && (

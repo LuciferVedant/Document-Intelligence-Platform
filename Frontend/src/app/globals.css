@@ -35,3 +35,23 @@
 @utility glass-panel {
   @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl shadow-slate-200/50;
 }
+
+/* Markdown Content Styling */
+.markdown-content h1, 
+.markdown-content h2, 
+.markdown-content h3 {
+  @apply tracking-tight mb-4 mt-6;
+}
+
+.markdown-content ul, 
+.markdown-content ol {
+  @apply mb-4 flex flex-col gap-2;
+}
+
+.markdown-content p {
+  @apply mb-4 leading-relaxed;
+}
+
+.markdown-content strong {
+  @apply font-black;
+}
