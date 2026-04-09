@@ -25,22 +25,22 @@ graph TD
     API -->|Auth/CRUD| DB
     
     subgraph "Processing Pipeline"
-    API -->|Extract Text| Extractor[Parser: PDF/DOCX/PPTX]
-    Extractor -->|Chunking| Chunker[Text Chunker]
-    Chunker -->|Embed| AI
-    AI -->|Vectors| API
-    API -->|Store Chunks| DB
+    API -->|"Extract Text"| Extractor["Parser: PDF/DOCX/PPTX"]
+    Extractor -->|"Chunking"| Chunker["Text Chunker"]
+    Chunker -->|"Embed"| AI
+    AI -->|"Vectors"| API
+    API -->|"Store Chunks"| DB
     end
 
     subgraph "Retrieval Flow (RAG)"
-    API -->|1. Query Vector| AI
-    AI -->|2. Embedding| API
-    UI -->|3. Manual Filter| API
-    API -->|4. Get Selected Docs| DB
-    API -->|5. Vector Search (Fallback)| DB
-    DB -->|6. Chunks| API
-    API -->|7. Prompt + Context| AI
-    AI -->|8. Grounded Response| API
+    API -->|"1. Query Vector"| AI
+    AI -->|"2. Embedding"| API
+    UI -->|"3. Manual Filter"| API
+    API -->|"4. Get Selected Docs"| DB
+    API -->|"5. Vector Search (Fallback)"| DB
+    DB -->|"6. Chunks"| API
+    API -->|"7. Prompt + Context"| AI
+    AI -->|"8. Grounded Response"| API
     end
 ```
 
