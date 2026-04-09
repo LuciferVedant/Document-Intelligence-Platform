@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/lib/api';
-import { Send, User, Bot, Loader2, Info, ChevronRight, FileText, Search, PlusCircle, Menu, X, Sparkles } from 'lucide-react';
+import { Send, User, Bot, Loader2, Info, ChevronRight, FileText, Search, PlusCircle, Menu, X, Sparkles, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -38,6 +38,9 @@ export default function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -129,6 +132,34 @@ export default function ChatPage() {
     toast.success('Started new analysis session');
   };
 
+  const deleteChat = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setChatToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!chatToDelete) return;
+    setIsDeleting(true);
+
+    try {
+      await api.delete(`/chat/${chatToDelete}`);
+      setChats(prev => prev.filter(c => c._id !== chatToDelete));
+      if (currentChatId === chatToDelete) {
+        setCurrentChatId(null);
+        setMessages([]);
+      }
+      toast.success('Analysis session deleted');
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to delete chat');
+    } finally {
+      setIsDeleting(false);
+      setChatToDelete(null);
+    }
+  };
+
   if (!mounted || !user) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
@@ -213,14 +244,26 @@ export default function ChatPage() {
                             )}
                         >
                             <h4 className={cn(
-                                "text-sm font-bold truncate pr-6",
+                                "text-sm font-bold truncate pr-10",
                                 currentChatId === chat._id ? "text-white" : "text-slate-900 group-hover:text-blue-600 transition-colors"
                             )}>{chat.title}</h4>
                             <p className={cn("text-[10px] font-bold uppercase tracking-tight mt-1 opacity-60")}>
                                 {new Date(chat.messages[0]?.timestamp || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}
                             </p>
-                            <div className={cn("absolute right-3 top-1/2 -translate-y-1/2 transition-all", currentChatId === chat._id ? "opacity-100" : "opacity-0 group-hover:opacity-100 text-blue-400 group-hover:translate-x-1")}>
-                                <ChevronRight size={18} strokeWidth={3} />
+                            
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <button 
+                                    onClick={(e) => deleteChat(e, chat._id)}
+                                    className={cn(
+                                        "p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500",
+                                        currentChatId === chat._id ? "text-white/60 hover:bg-white/20 hover:text-white" : "text-slate-400"
+                                    )}
+                                >
+                                    <Trash2 size={16} strokeWidth={2.5} />
+                                </button>
+                                <div className={cn("transition-all", currentChatId === chat._id ? "opacity-100" : "opacity-0 group-hover:opacity-0 group-hover:translate-x-1")}>
+                                    <ChevronRight size={18} strokeWidth={3} />
+                                </div>
                             </div>
                         </motion.button>
                     ))}
@@ -392,6 +435,63 @@ export default function ChatPage() {
           </div>
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+            <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => !isDeleting && setIsDeleteModalOpen(false)}
+               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-[40px] shadow-2xl overflow-hidden"
+            >
+                <div className="p-8 md:p-10 flex flex-col items-center text-center">
+                    <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center text-red-500 mb-6 shadow-inner">
+                        <Trash2 size={40} strokeWidth={1.5} />
+                    </div>
+                    
+                    <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Delete Analysis?</h3>
+                    <p className="text-slate-500 font-medium leading-relaxed mb-10">
+                        This action is permanent and will remove all contextual history for this session. Are you absolutely certain?
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+                        <button 
+                            disabled={isDeleting}
+                            onClick={() => setIsDeleteModalOpen(false)}
+                            className="flex-1 py-4 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-all active:scale-95 disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            disabled={isDeleting}
+                            onClick={confirmDelete}
+                            className="flex-1 py-4 px-6 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-red-200 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {isDeleting ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={20} />
+                                    <span>Deleting...</span>
+                                </>
+                            ) : (
+                                "Confirm Delete"
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

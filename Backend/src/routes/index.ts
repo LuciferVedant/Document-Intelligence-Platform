@@ -39,5 +39,6 @@ router.delete('/docs/:id', authMiddleware, docController.deleteDocument);
 router.post('/chat/ask', authMiddleware, chatController.askQuestion);
 router.get('/chat', authMiddleware, chatController.getChats);
 router.get('/chat/:id', authMiddleware, chatController.getChatById);
+router.delete('/chat/:id', authMiddleware, chatController.deleteChat);
 
 export default router;
