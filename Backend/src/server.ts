@@ -18,6 +18,16 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
+// Root route for health check
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Document Intelligence API is running',
+    version: '1.0.0',
+    endpoints: '/api'
+  });
+});
+
 // Routes
 app.use('/api', routes);
 
