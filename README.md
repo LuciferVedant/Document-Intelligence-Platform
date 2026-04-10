@@ -61,4 +61,4 @@ graph TD
 - **Frontend**: Next.js 15, Tailwind CSS, Framer Motion, Lucide Icons, Axios.
 - **Backend**: Node.js, Express, TypeScript, Mongoose.
 - **Database**: MongoDB (Atlas Vector Search enabled).
-- **AI**: Google Gemini (2.5 Flash + Embedding-001).
+- **AI**: Google Gemini (3 Flash + Embedding-2).

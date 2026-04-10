@@ -79,7 +79,7 @@ When a user asks a question via `POST /api/chat/ask`:
 3. **Context Construction**: Relevant chunks are formatted into a context block.
 4. **Context Guard**: A strict **50-chunk limit** is enforced to prevent LLM context overflow and optimize performance.
 5. **Prompt Engineering**: A prompt is built combining the Context, User Query, and History.
-6. **LLM Generation**: **Gemini 2.5 Flash** (or latest) generates an grounded answer.
+6. **LLM Generation**: **Gemini 3 Flash** (or latest) generates an grounded answer.
 7. **Citations**: Sources are returned and grouped by document in the frontend.
 
 ---
