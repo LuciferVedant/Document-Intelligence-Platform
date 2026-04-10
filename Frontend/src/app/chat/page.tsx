@@ -388,7 +388,7 @@ export default function ChatPage() {
                             <Bot size={20} strokeWidth={2.5} />
                         </div>
                         <div>
-                            <p className="text-xs font-black text-slate-900 leading-none tracking-tight">Intelligence v2.5</p>
+                            <p className="text-xs font-black text-slate-900 leading-none tracking-tight">Intelligence v3</p>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">Flash Core</p>
                         </div>
                     </div>
