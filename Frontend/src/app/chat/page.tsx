@@ -55,6 +55,7 @@ export default function ChatPage() {
   const [availableDocs, setAvailableDocs] = useState<Document[]>([]);
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const CHUNK_THRESHOLD = 50;
   const currentTotalChunks = availableDocs
@@ -265,6 +266,8 @@ export default function ChatPage() {
                             type="text" 
                             placeholder="Search discussions..." 
                             className="w-full bg-slate-100/50 pl-11 pr-4 py-3 rounded-2xl text-sm border-2 border-transparent focus:border-blue-200 focus:bg-white outline-none transition-all-custom font-medium"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
                 </div>
@@ -277,11 +280,15 @@ export default function ChatPage() {
                             <div className="flex flex-col items-center justify-center py-10 gap-3 text-slate-300">
                                 <Loader2 className="animate-spin" size={24} />
                             </div>
-                        ) : chats.length === 0 ? (
+                        ) : chats.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
                             <div className="py-6 text-center opacity-40">
-                                <p className="text-[10px] font-bold uppercase tracking-tighter">No past chats</p>
+                                <p className="text-[10px] font-bold uppercase tracking-tighter">
+                                    {searchQuery ? "No matching sessions" : "No past chats"}
+                                </p>
                             </div>
-                        ) : chats.map((chat) => (
+                        ) : chats
+                            .filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()))
+                            .map((chat) => (
                             <motion.button
                                 key={chat._id}
                                 whileHover={{ x: 4 }}
